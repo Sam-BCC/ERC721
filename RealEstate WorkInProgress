@@ -1,0 +1,136 @@
+pragma solidity ^0.6.0;
+
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/ERC721.sol";
+
+//THIS IS A WORK IN PROGRESS CONTRACT AND IS NOT FINAL YET
+
+contract Land is ERC721 {
+     //Counter TokenId
+    uint256 private _tokenId;
+   
+   //Address to receive bids in ether
+    address payable escrow;
+    
+    // Addressof contract owner
+    address payable public contractOwner;
+    
+    constructor() ERC721("Zameen","ZMN") public {
+       contractOwner = msg.sender;
+       escrow = 0x93E2Ec2BD2c5C17e1E44ABaCCa955a26B319c7Ca;
+    }
+    
+     // mapping from token ids to their owner's token address
+    mapping(uint => address payable) private _tokenOwners;
+    
+     // mapping of baseValue against tokenId
+    mapping (uint => uint) private _baseValue;
+    
+    // mapping to check if a tokenId is listed for bidding
+    mapping (uint => bool) public _listedTokens;
+    
+    // mapping for highest bid received against a tokenId
+    mapping (uint => uint) private _highestBid;
+    
+    //mapping for highest bidder's address against tokenId
+    mapping (uint => address payable) private _highestBidder;
+    
+
+    //function to register a property which creates a unique tokenId
+    
+    function Register(address payable tokenOwner, string memory tokenURL, uint baseValue) public returns (uint256) {
+        _tokenId++;
+        // asssign new token id
+        uint newTokenId = _tokenId;
+        // new toke created and ownership assiged 
+        _mint(tokenOwner, newTokenId);
+        
+        // baseValue save against tokenId
+         _baseValue[newTokenId] = baseValue;
+         
+         //save owner address against token
+         _tokenOwners[newTokenId] = tokenOwner;
+        
+        // new TokeURI save against newTokenID which contains property details
+        _setTokenURI(newTokenId, tokenURL);
+        
+        // setting initial highest bid to base value; we can also set it to 0, or create a set new baseValue function if needed
+        _highestBid[newTokenId] = _baseValue[newTokenId];
+
+        return newTokenId;
+    }
+    
+    //function to list a tokenId for bidding
+    
+    function List (uint tokenId) public returns (bool) {
+        require (_tokenOwners[tokenId] == msg.sender); 
+        _listedTokens[tokenId] = true;
+        return true;
+    }
+    
+    // function to bid for a tokenId
+    
+    function Bid (uint tokenId) public payable{
+        require (_listedTokens[tokenId] == true );
+        require (_highestBid[tokenId] < msg.value, "Bid was lower than highest bid" );
+        escrow.transfer(msg.value); // transfer ether received for bid to escrow
+        _highestBid[tokenId] = msg.value; // update highest bid mapping
+        _highestBidder[tokenId] = msg.sender; // update highest bidder mapping
+    
+    }
+   
+   // IS BELOW RECEIVE FUNCTION CORRECT?
+  // receive () external payable{
+     // payable(escrow).transfer(msg.value);
+   //}
+   
+    //function to view a bid received for a tokenId
+    
+    function viewBid (uint tokenId) public view returns (uint) {
+    require (_tokenOwners[tokenId] == msg.sender); // to ensure only the token owner can see the bid
+    return _highestBid[tokenId];
+        
+    }
+    
+    // function to show that ethers have been received and in the address balance
+    function escrowBalance () public view returns (uint) {
+    return escrow.balance;
+        
+    }
+    
+   // Created this function to be used within acceptBid or rejectBid function to transfer ether from escrow to relevant recipient
+   //IS THIS CORRECT?
+   function escrowTransfer(address _escrow, address payable _recipient, uint _amount) public {
+       _escrow = msg.sender;
+       payable(_recipient).transfer(_amount);
+       
+   }
+   
+    //function to accept a bid
+    function acceptBid (uint tokenId) public payable {
+    require (_tokenOwners[tokenId] == msg.sender); // to ensure that only token owner can accept a bid
+     safeTransferFrom(msg.sender,  _highestBidder[tokenId], tokenId, ""); //transfer token to bidder
+     
+     //BELOW INDENTED CODE SEEMS TO BE GIVING PROBLEM, PLEASE GIVE FEEDBACK ON HOW TO RESOLVE THIS?
+     //escrowTransfer(escrow, msg.sender, _highestBid[tokenId]);
+     
+    _tokenOwners[tokenId] = _highestBidder[tokenId]; //update new token owner
+    delete _highestBidder[tokenId]; // delete stored data 
+    delete _highestBid[tokenId];  // delete stored data
+    
+    // reset hightest bid to basevalue OR can also make function to set new baseValue
+    _highestBid[tokenId] = _baseValue[tokenId]; // //reset highest bid
+    _listedTokens[tokenId] = false; // unlist tokenId
+        
+    
+    }
+    // Reject Bid
+    function rejectBid (uint tokenId) public {
+    
+    //BELOW INDENTED CODE SEEMS TO BE GIVING PROBLEM, PLEASE GIVE FEEDBACK ON HOW TO RESOLVE THIS?
+    //escrowTransfer(escrow,_highestBidder[tokenId], _highestBid[tokenId
+    
+    delete _highestBidder[tokenId]; // delete stored data 
+    delete _highestBid[tokenId]; //delete stored data
+    _highestBid[tokenId] = _baseValue[tokenId]; //reset highest bid to baseValue or if needed can also add set new baseValue function
+    }
+}
