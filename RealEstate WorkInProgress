@@ -72,12 +72,24 @@ contract Land is ERC721 {
     function Bid (uint tokenId) public payable{
         require (_listedTokens[tokenId] == true );
         require (_highestBid[tokenId] < msg.value, "Bid was lower than highest bid" );
+       
+       //using if to ensure that there is already an existing higher bid compared to base value in case refund is needed
+       if (_highestBid[tokenId] > _baseValue[tokenId]) {
+       
+      //BELOW INDENTED CODE SEEMS TO BE GIVING PROBLEM, PLEASE GIVE FEEDBACK ON HOW TO RESOLVE THIS?
+    //escrowTransfer(escrow,_highestBidder[tokenId], _highestBid[tokenId]; // to refund ether back to existing highest bidder
+    
         escrow.transfer(msg.value); // transfer ether received for bid to escrow
+        _highestBid[tokenId] = msg.value; // update highest bid mapping
+        _highestBidder[tokenId] = msg.sender; // update highest bidder mapping
+        }
+        else {
+         escrow.transfer(msg.value); // transfer ether received for bid to escrow
         _highestBid[tokenId] = msg.value; // update highest bid mapping
         _highestBidder[tokenId] = msg.sender; // update highest bidder mapping
     
     }
-   
+    }
    // IS BELOW RECEIVE FUNCTION CORRECT?
   // receive () external payable{
      // payable(escrow).transfer(msg.value);
@@ -108,10 +120,11 @@ contract Land is ERC721 {
     //function to accept a bid
     function acceptBid (uint tokenId) public payable {
     require (_tokenOwners[tokenId] == msg.sender); // to ensure that only token owner can accept a bid
+     
      safeTransferFrom(msg.sender,  _highestBidder[tokenId], tokenId, ""); //transfer token to bidder
      
      //BELOW INDENTED CODE SEEMS TO BE GIVING PROBLEM, PLEASE GIVE FEEDBACK ON HOW TO RESOLVE THIS?
-     //escrowTransfer(escrow, msg.sender, _highestBid[tokenId]);
+     //escrowTransfer(escrow, msg.sender, _highestBid[tokenId]); // to transfer ether to property owner
      
     _tokenOwners[tokenId] = _highestBidder[tokenId]; //update new token owner
     delete _highestBidder[tokenId]; // delete stored data 
@@ -127,7 +140,7 @@ contract Land is ERC721 {
     function rejectBid (uint tokenId) public {
     
     //BELOW INDENTED CODE SEEMS TO BE GIVING PROBLEM, PLEASE GIVE FEEDBACK ON HOW TO RESOLVE THIS?
-    //escrowTransfer(escrow,_highestBidder[tokenId], _highestBid[tokenId
+    //escrowTransfer(escrow,_highestBidder[tokenId], _highestBid[tokenId]; // to refund ether back to bidder
     
     delete _highestBidder[tokenId]; // delete stored data 
     delete _highestBid[tokenId]; //delete stored data
