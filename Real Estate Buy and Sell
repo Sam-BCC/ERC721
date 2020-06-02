@@ -1,0 +1,168 @@
+//Task:
+//- Register a Property: Property register with its detail and link for more details as URI (add zameen.com urls).
+//- Define Property asking value (demand) in Ether
+//- By default on register property will not be on Sale.
+//- List Property: A function will enable property for sale
+//- Buying Request: A request for buying property with offer value
+//- Offer Reject: A owner can reject the offer
+//- Offer Accept: A owner can accept offer
+//- Buy Property against Offer: Transfer ownership on successful transfer
+
+//Approach used to implement the task above: (this implementation assumes ether to be the currency for buying and assumes URI = URL)
+// A seller can register a property which generates a digital representation of the property in the form of a unique tokenId(non-fungible token)
+// Seller can list a property which means that it is up for sale
+// Potential buyers can bid or make an offer for a property, however in order for the bid to be recorded or valid, the offer must be higher than the last bid
+// At the time of making a valid bid, buyer makes full payment in ether which are held in contract contract address that acts as escrow
+// If seller accepts the bid, ether funds from contract address are transferred to seller and ownership of tokenId is transferred to buyer
+// If seller rejects the bid, ether funds from contract address are refunded to buyer/bidder
+
+//Alternate approach 1 that can be potentially used to implement the task above:
+//All else same as implemented approach with following modifications;
+//At the time of making valid bid, buyer makes a deposit in ether which is a % of offer/bid made and is held in contract address
+//If the bid is accepted, buyer makes remaining payment within a predefined time, which is held in contract address
+//Seller accepts payment, which transfers the remaining payment and deposit into his/her account and tokenId owndership is transferred to buyer
+//In case buyer cannot make payment within predefined time, seller can withdraw deposit
+
+pragma solidity ^0.6.0;
+
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/ERC721.sol";
+
+contract RealEstate is ERC721 {
+    
+    //Counter for TokenId 
+    uint256 private _tokenId;
+    
+    // EOA or address of contract owner
+    address payable public contractOwner;
+    
+    //constructor to initiate
+    constructor() ERC721("Zameen","ZMN") public {
+       contractOwner = msg.sender;
+    }
+  
+  //Mappings to keep record of data and transactions:
+  
+    // mapping from tokenId to their owner's token address
+    mapping(uint => address payable) private _tokenOwners;
+    
+    // mapping from URL to the tokenId
+    mapping(string  => uint) private _tokenIds;
+    
+    // mapping from tokenId to the baseValue or starting demand of property
+    mapping (uint => uint) private _baseValue;
+    
+    // mapping from tokenId to check if a tokenId is listed for bidding
+    mapping (uint => bool) public _listedTokens;
+    
+    // mapping from tokenId to the highest bid 
+    mapping (uint => uint) private _highestBid;
+    
+    // mapping from tokenId to the highest bidder's address 
+    mapping (uint => address payable) private _highestBidder;
+    
+
+    //function to register a property which creates a unique tokenId for the property
+    function Register(address payable tokenOwner, string memory propertyURL, uint baseValue) public returns (uint256) {
+       //initiate the tokenId counter
+        _tokenId++;
+        // asssign the value of _tokenId counter to newTokenId variable
+        uint newTokenId = _tokenId;
+        // newTokenId minted and ownership assiged 
+        _mint(tokenOwner, newTokenId);
+        // baseValue saved against newTokenId 
+        _baseValue[newTokenId] = baseValue;
+        //owner address saved against newTokenId
+        _tokenOwners[newTokenId] = tokenOwner;
+        //new propertyURL (contains property details) saved against newTokenId
+        _setTokenURI(newTokenId, propertyURL);
+        //newTokenId saved against propertyURL
+        _tokenIds[propertyURL] = newTokenId;
+        // setting initial highest bid to base value; we can also set it to 0, or create a setNewBaseValue function if needed
+        _highestBid[newTokenId] = _baseValue[newTokenId];
+        return newTokenId;
+    }
+    
+    //function to reset baseValue
+    function setBaseValue (uint tokenId, uint newBaseValue) public returns (uint){
+        require(_tokenOwners[tokenId] == msg.sender);
+        _baseValue[tokenId] = newBaseValue;
+        if (_highestBid[tokenId] < newBaseValue) {
+            rejectBid(tokenId);
+        }
+    }
+    
+    //function to list a tokenId for bidding
+    function List (uint tokenId) public returns (bool) {
+        require (_tokenOwners[tokenId] == msg.sender); 
+        _listedTokens[tokenId] = true;
+        return true;
+    }
+   
+    //function to bid or make an offer for a property: takes bid payment in ether and holds it in contract address as escrow
+    function Bid (uint tokenId) public payable{
+        require (_listedTokens[tokenId] == true ); // to ensure tokenId is listed
+        require (_highestBid[tokenId] < msg.value, "Bid was lower than highest bid" ); // to ensure new bid is higher than previous highest bid
+       
+       //using if and else because in case we already have an existing highest bidder we would have to refund them before updating the records with the new highest bidder
+       // if the highest bid is higher than baseValue, then there already is an existing highest bidder who needs to be refunded
+       if (_highestBid[tokenId] > _baseValue[tokenId]) {
+         payable( _highestBidder[tokenId]).transfer(_highestBid[tokenId]); // refund the existing highest bidder 
+        _highestBid[tokenId] = msg.value; // replace highest bid mapping with new bid
+        _highestBidder[tokenId] = msg.sender; // replace highest bidder mapping with new bidder
+        } 
+        else {
+        _highestBid[tokenId] = msg.value; // update highest bid mapping
+        _highestBidder[tokenId] = msg.sender; // update highest bidder mapping
+    }
+}
+
+    // fallback function to receive bid payments and hold them in contract address
+    fallback() external payable{
+       msg.sender.transfer(msg.value);
+   }
+ 
+    //function to view the highest bid received for a tokenId
+    function viewBid (uint tokenId) public view returns (uint) {
+     require (_tokenOwners[tokenId] == msg.sender); // to ensure only the token owner can see the bid
+     return _highestBid[tokenId];  
+    }
+    
+    //function to view listed property's tokenId
+    function getTokenId (string memory propertyURL) public view returns (uint) {
+        return _tokenIds[propertyURL];
+    }
+    
+    // function to show that ether balance of an address
+    function addressBalance (address _address) public view returns (uint) {
+     return address(_address).balance;
+        
+    }
+    
+    //function to accept a bid
+    function acceptBid (uint tokenId) public payable {
+     require (_tokenOwners[tokenId] == msg.sender); // to ensure that only token owner can accept a bid
+     payable(msg.sender).transfer(_highestBid[tokenId]); // transfer ether from contract address to property owner
+     safeTransferFrom(msg.sender,  _highestBidder[tokenId], tokenId, ""); //change of ownership, transfer tokenId to bidder
+     _tokenOwners[tokenId] = _highestBidder[tokenId]; //update new token owner
+     delete _highestBidder[tokenId]; // delete stored data so that new owner can receive new bids 
+     delete _highestBid[tokenId];  // delete stored data to so that new owner can receive new bidders' addresses
+     _highestBid[tokenId] = _baseValue[tokenId]; //reset hightest bid to basevalue or can also make function to set new baseValue
+     _listedTokens[tokenId] = false; // unlist tokenId
+    }
+    
+    // function to reject bid
+    function rejectBid (uint tokenId) public {
+     payable( _highestBidder[tokenId]).transfer(_highestBid[tokenId]); // refund the highest bidder 
+     delete _highestBidder[tokenId]; // delete stored data 
+     delete _highestBid[tokenId]; //delete stored data 
+     _highestBid[tokenId] = _baseValue[tokenId]; //reset highest bid to baseValue  or can also add set new baseValue function
+    
+    }
+    
+    //Alternate function for rejecting bid so that bidding can resume from last highest bid
+    //function rejectBid (uint tokenId) public {
+    //payable( _highestBidder[tokenId]).transfer(_highestBid[tokenId]); // refund the highest bidder 
+     //_baseValue[tokenId] = _highestBid[tokenId]; // reset baseValue to rejected highest bid
+    //delete _highestBidder[tokenId]; // delete stored data 
+    //}
+}
