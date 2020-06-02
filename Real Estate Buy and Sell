@@ -16,8 +16,8 @@
 // If seller accepts the bid, ether funds from contract address are transferred to seller and ownership of tokenId is transferred to buyer
 // If seller rejects the bid, ether funds from contract address are refunded to buyer/bidder
 
-//Alternate approach 1 that can be potentially used to implement the task above:
-//All else same as implemented approach with following modifications;
+//Alternate approach that can be potentially used to implement the task above:
+//All else same with following modifications;
 //At the time of making valid bid, buyer makes a deposit in ether which is a % of offer/bid made and is held in contract address
 //If the bid is accepted, buyer makes remaining payment within a predefined time, which is held in contract address
 //Seller accepts payment, which transfers the remaining payment and deposit into his/her account and tokenId owndership is transferred to buyer
