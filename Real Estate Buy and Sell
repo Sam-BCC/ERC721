@@ -83,7 +83,7 @@ contract RealEstate is ERC721 {
         _setTokenURI(newTokenId, propertyURL);
         //newTokenId saved against propertyURL
         _tokenIds[propertyURL] = newTokenId;
-        // setting initial highest bid to base value; we can also set it to 0, or create a setNewBaseValue function if needed
+        // setting initial highest bid to base value
         _highestBid[newTokenId] = _baseValue[newTokenId];
         return newTokenId;
     }
@@ -144,7 +144,7 @@ contract RealEstate is ERC721 {
      _tokenOwners[tokenId] = _highestBidder[tokenId]; //update new token owner
      delete _highestBidder[tokenId]; // delete stored data so that new owner can receive new bids 
      delete _highestBid[tokenId];  // delete stored data to so that new owner can receive new bidders' addresses
-     _highestBid[tokenId] = _baseValue[tokenId]; //reset hightest bid to basevalue or can also make function to set new baseValue
+     _highestBid[tokenId] = _baseValue[tokenId]; //reset hightest bid to basevalue 
      _listedTokens[tokenId] = false; // unlist tokenId
     }
     
@@ -153,7 +153,7 @@ contract RealEstate is ERC721 {
      payable( _highestBidder[tokenId]).transfer(_highestBid[tokenId]); // refund the highest bidder 
      delete _highestBidder[tokenId]; // delete stored data 
      delete _highestBid[tokenId]; //delete stored data 
-     _highestBid[tokenId] = _baseValue[tokenId]; //reset highest bid to baseValue  or can also add set new baseValue function
+     _highestBid[tokenId] = _baseValue[tokenId]; //reset highest bid to baseValue  
     
     }
     
