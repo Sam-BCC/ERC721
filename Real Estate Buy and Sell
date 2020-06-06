@@ -88,11 +88,6 @@ contract RealEstate is ERC721 {
         return newTokenId;
     }
     
-    //function to reset baseValue
-    function setBaseValue (uint tokenId, uint newBaseValue) public returns (uint){
-        require(_tokenOwners[tokenId] == msg.sender);
-        _baseValue[tokenId] = newBaseValue;
-    }
     
     //function to list a tokenId for bidding
     function List (uint tokenId) public returns (bool) {
@@ -162,10 +157,4 @@ contract RealEstate is ERC721 {
     
     }
     
-    //Alternate function for rejecting bid so that bidding can resume from last highest bid
-    //function rejectBid (uint tokenId) public {
-    //payable( _highestBidder[tokenId]).transfer(_highestBid[tokenId]); // refund the highest bidder 
-     //_baseValue[tokenId] = _highestBid[tokenId]; // reset baseValue to rejected highest bid
-    //delete _highestBidder[tokenId]; // delete stored data 
-    //}
 }
