@@ -92,9 +92,6 @@ contract RealEstate is ERC721 {
     function setBaseValue (uint tokenId, uint newBaseValue) public returns (uint){
         require(_tokenOwners[tokenId] == msg.sender);
         _baseValue[tokenId] = newBaseValue;
-        if (_highestBid[tokenId] < newBaseValue) {
-            rejectBid(tokenId);
-        }
     }
     
     //function to list a tokenId for bidding
