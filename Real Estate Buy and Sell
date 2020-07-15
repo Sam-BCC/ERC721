@@ -116,7 +116,6 @@ contract RealEstate is ERC721 {
 
     // fallback function to receive bid payments and hold them in contract address
     fallback() external payable{
-       msg.sender.transfer(msg.value);
    }
  
     //function to view the highest bid received for a tokenId
